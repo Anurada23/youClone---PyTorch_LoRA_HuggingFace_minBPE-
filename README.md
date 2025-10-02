@@ -1,4 +1,4 @@
-# 🧠 youClone – Mimicking AI with Transformers
+# youClone – Mimicking AI with Transformers
 
 **youClone** is a passion-driven and an educational project built to deeply understand how an **end-to-end ML pipeline** works — from raw text data and tokenizer training all the way to building and fine-tuning a transformer model.  
 The aim was not just to build a chatbot, but to **learn the internals of modern LLMs** — tokenization, embeddings, self-attention, decoder architecture, and fine-tuning strategies.
