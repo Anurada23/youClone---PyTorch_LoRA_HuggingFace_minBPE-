@@ -1,27 +1,68 @@
 import json
+from pathlib import Path
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArguments
 from datasets import Dataset
 import matplotlib.pyplot as plt
 import torch
 
 # =====================================
+#  WhatsApp Chat Preprocessing
+# =====================================
+
+# Load exported WhatsApp structured JSON
+file_path = "../output/combined_text.json"
+with open(file_path, "r", encoding="utf-8") as f:
+    all_chats = json.load(f)
+
+# Define your own WhatsApp name
+my_name = "Anurada"  
+
+# Prepare fine-tuning structured conversation format
+fine_tuning_data = []
+
+for chat in all_chats:
+    messages = chat["messages"]
+    conv = []
+    for msg in messages:
+        sender = msg["sender"]
+        content = msg["message"].strip()
+        if not content:
+            continue  # skip empty messages
+
+        role = "assistant" if sender == my_name else "user"
+        conv.append({"role": role, "content": content})
+
+    # Keep only conversations that have at least one assistant message
+    if any(m["role"] == "assistant" for m in conv):
+        fine_tuning_data.append(conv)
+
+# Save structured fine-tuning data
+output_path = "../output/fine_tuning/data/fine_tuning.json"
+Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+with open(output_path, "w", encoding="utf-8") as f:
+    json.dump(fine_tuning_data, f, ensure_ascii=False, indent=4)
+
+print(f"Saved fine-tuning data to {output_path}")
+
+# =====================================
 # 1. Load Fine-Tuning Data
 # =====================================
-file_path = "../output/fine_tuning/data/fine_tuning.json"
-with open(file_path, "r") as file:
+
+with open(output_path, "r", encoding="utf-8") as file:
     data = json.load(file)
 
-# Combine conversation turns (You + Assistant)
+# Combine conversation turns (user + assistant)
 combined_texts = []
 for conv in data:
     for i in range(0, len(conv), 2):
-        you = conv[i].get("content", "")
-        assistant = conv[i + 1].get("content", "") if i + 1 < len(conv) else ""
-        combined_texts.append(f"<s>{you}</s><sep>{assistant}</sep>")
+        user_msg = conv[i].get("content", "")
+        assistant_msg = conv[i + 1].get("content", "") if i + 1 < len(conv) else ""
+        combined_texts.append(f"<s>{user_msg}</s><sep>{assistant_msg}</sep>")
 
 # =====================================
 # 2. Load Tokenizer & Model
 # =====================================
+
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 tokenizer.add_special_tokens({"bos_token": "<s>", "eos_token": "</s>", "sep_token": "<sep>"})
 
@@ -34,6 +75,7 @@ model.to(device)
 # =====================================
 # 3. Apply LoRA
 # =====================================
+
 from transformer.lora import get_lora_model, print_trainable_parameters
 
 lora_model = get_lora_model(
@@ -47,8 +89,9 @@ lora_model = get_lora_model(
 print_trainable_parameters(lora_model)
 
 # =====================================
-# 4. Tokenize Data (Automatic padding/truncation)
+# 4. Tokenize Data
 # =====================================
+
 block_size = 128
 tokenized_data = tokenizer(
     combined_texts,
@@ -62,6 +105,7 @@ tokenized_data["labels"] = tokenized_data["input_ids"]
 # =====================================
 # 5. Build Hugging Face Dataset
 # =====================================
+
 dataset = Dataset.from_dict({
     "input_ids": tokenized_data["input_ids"],
     "attention_mask": tokenized_data["attention_mask"],
@@ -75,6 +119,7 @@ eval_dataset = split_dataset["test"]
 # =====================================
 # 6. Training Arguments
 # =====================================
+
 training_args = TrainingArguments(
     output_dir="./results_lora",
     evaluation_strategy="epoch",
@@ -93,6 +138,7 @@ training_args = TrainingArguments(
 # =====================================
 # 7. Trainer (LoRA model)
 # =====================================
+
 trainer = Trainer(
     model=lora_model,
     args=training_args,
@@ -104,11 +150,13 @@ trainer = Trainer(
 # =====================================
 # 8. Train LoRA model
 # =====================================
+
 trainer.train()
 
 # =====================================
 # 9. Visualize Loss
 # =====================================
+
 train_loss_steps = []
 eval_loss_steps = []
 
@@ -135,7 +183,8 @@ plt.show()
 # =====================================
 # 10. Generate from LoRA model
 # =====================================
-user_message = "Salam labas "
+
+user_message = "Salam labas"
 input_tokens = tokenizer.encode(user_message, return_tensors="pt").to(device)
 
 lora_model.eval()
