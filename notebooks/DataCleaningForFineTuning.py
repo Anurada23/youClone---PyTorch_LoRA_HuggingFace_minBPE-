@@ -10,7 +10,7 @@ for file in data_directory.glob("*.txt"):
     file_name = file.stem
     all_chats[file_name] = read_whatsapp_chat(file)
 
-# ✅ Combine messages with sender info
+#  Combine messages with sender info
 text_sequence = ""
 structured_data = []  # for saving to JSON
 
@@ -37,12 +37,12 @@ for file_name, chat_df in all_chats.items():
         "messages": structured_chat
     })
 
-# ✅ Save combined text file
+# Save combined text file
 output_text_path = Path("../output/combined_text.txt")
 with open(output_text_path, "w", encoding="utf-8") as f:
     f.write(text_sequence)
 
-# ✅ Save structured JSON file
+# Save structured JSON file
 output_json_path = Path("../output/combined_text.json")
 with open(output_json_path, "w", encoding="utf-8") as f:
     json.dump(structured_data, f, ensure_ascii=False, indent=4)
