@@ -57,7 +57,7 @@ for conv in data:
     for i in range(0, len(conv), 2):
         user_msg = conv[i].get("content", "")
         assistant_msg = conv[i + 1].get("content", "") if i + 1 < len(conv) else ""
-        combined_texts.append(f"<s>{user_msg}</s><sep>{assistant_msg}</sep>")
+        combined_texts.append(f"<s>{user_msg}</s><sep><s>{assistant_msg}</s>")
 
 # =====================================
 # 2. Load Tokenizer & Model
@@ -193,3 +193,4 @@ with torch.no_grad():
 
 print(f"User: {user_message}")
 print(f"Assistant (LoRA): {tokenizer.decode(output[0].tolist())}")
+
